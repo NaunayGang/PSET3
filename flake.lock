@@ -215,11 +215,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1774627184,
-        "narHash": "sha256-6F4lEvcjvtFmkdveEGdM3+cEtDzXD63Uwi/yTPkM1Ds=",
+        "lastModified": 1774986763,
+        "narHash": "sha256-c5ZWrGF4Wusv177wO3LnEZ2+k9JKDMOTB7V+D7pRgDo=",
         "ref": "refs/heads/master",
-        "rev": "f4b9e3c5a35d38786d7c9f2346f49b1d619b2d59",
-        "revCount": 44,
+        "rev": "e78cb9f62462df60d751ad5f773445b96984d157",
+        "revCount": 47,
         "type": "git",
         "url": "https://codeberg.org/yuuhikaze/tern"
       },
