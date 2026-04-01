@@ -4,7 +4,7 @@ The Factory pattern provides an interface for creating objects, centralizing
 object creation logic and validation in one place.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from ..entities.incident import Incident
@@ -60,7 +60,7 @@ class EntityFactory:
             raise ValueError("Password hash cannot be empty")
 
         if created_at is None:
-            created_at = datetime.now()
+            created_at = datetime.now(timezone.utc)
 
         return User(
             id=id,
@@ -114,7 +114,7 @@ class EntityFactory:
             raise ValueError("Invalid created_by user ID")
 
         if created_at is None:
-            created_at = datetime.now()
+            created_at = datetime.now(timezone.utc)
 
         if updated_at is None:
             updated_at = created_at
@@ -172,7 +172,7 @@ class EntityFactory:
             raise ValueError("Invalid incident_id")
 
         if created_at is None:
-            created_at = datetime.now()
+            created_at = datetime.now(timezone.utc)
 
         if updated_at is None:
             updated_at = created_at
@@ -224,7 +224,7 @@ class EntityFactory:
             raise ValueError("Notification message cannot be empty")
 
         if created_at is None:
-            created_at = datetime.now()
+            created_at = datetime.now(timezone.utc)
 
         return Notification(
             id=id,
