@@ -8,8 +8,10 @@ from sqlalchemy.orm import Session
 from ..domain.entities.user import User
 from ..domain.enums.role import Role
 from ..domain.repositories.user_repository import UserRepository
+from ..domain.repositories.incident_repository import IncidentRepository
 from ..infrastructure.database.connection import get_db
 from ..infrastructure.repositories.sqlalchemy_user_repository import SQLAlchemyUserRepository
+from ..infrastructure.repositories.sqlalchemy_incident_repository import SQLAlchemyIncidentRepository
 from ..application.use_cases.auth.get_current_user import GetCurrentUserUseCase
 
 # OAuth2 scheme for token extraction
@@ -27,6 +29,19 @@ def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
         User repository instance
     """
     return SQLAlchemyUserRepository(db)
+
+
+def get_incident_repository(db: Session = Depends(get_db)) -> IncidentRepository:
+    """
+    Dependency for getting incident repository.
+
+    Args:
+        db: Database session
+
+    Returns:
+        Incident repository instance
+    """
+    return SQLAlchemyIncidentRepository(db)
 
 
 async def get_current_user(
