@@ -16,7 +16,7 @@ class User:
     email: str
     role: Role
     hashed_password: str
-    created_at: datetime
+    created_at: Optional[datetime] = None
 
     def is_admin(self) -> bool:
         """Check if user has admin role."""
