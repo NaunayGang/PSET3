@@ -14,6 +14,9 @@ class NotificationBuilder(ABC):
     method defines the algorithm skeleton, while subclasses implement specific steps.
     """
 
+    def __init__(self, data: dict):
+        self.data = data
+
     def build_notification(self) -> str:
         """
         Template method that defines the notification building algorithm.
@@ -88,3 +91,95 @@ class NotificationBuilder(ABC):
         """
         # Default: no validation required
         pass
+
+
+class IncidentCreatedNotificationBuilder(NotificationBuilder):
+    """Builder for incident created notifications."""
+
+    def __init__(self, data: dict):
+        super().__init__(data)
+
+    def build_subject(self) -> str:
+        title = self.data.get("title", "Unknown Incident")
+        return f"New Incident: {title}"
+
+    def build_body(self) -> str:
+        incident_id = self.data.get("id", "N/A")
+        title = self.data.get("title", "Unknown")
+        severity = self.data.get("severity", "Unknown")
+        creator = self.data.get("creator_name", "System")
+        return (
+            f"Incident #{incident_id}: {title}\n"
+            f"Severity: {severity}\n"
+            f"Created by: {creator}\n\n"
+            f"Please log in to the OpsCenter dashboard for details."
+        )
+
+
+class IncidentAssignedNotificationBuilder(NotificationBuilder):
+    """Builder for incident assigned notifications."""
+
+    def __init__(self, data: dict, assigner_name: str = "System"):
+        super().__init__(data)
+        self.assigner_name = assigner_name
+
+    def build_subject(self) -> str:
+        title = self.data.get("title", "Unknown")
+        return f"Incident Assigned: {title}"
+
+    def build_body(self) -> str:
+        incident_id = self.data.get("id", "N/A")
+        title = self.data.get("title", "Unknown")
+        severity = self.data.get("severity", "Unknown")
+        return (
+            f"Incident #{incident_id}: {title}\n"
+            f"Severity: {severity}\n"
+            f"Assigned by: {self.assigner_name}\n\n"
+            f"Please review and take action in the OpsCenter dashboard."
+        )
+
+
+class IncidentStatusChangedNotificationBuilder(NotificationBuilder):
+    """Builder for incident status change notifications."""
+
+    def __init__(self, data: dict, new_status: str, changed_by_name: str = "System"):
+        super().__init__(data)
+        self.new_status = new_status
+        self.changed_by_name = changed_by_name
+
+    def build_subject(self) -> str:
+        incident_id = self.data.get("id", "N/A")
+        return f"Incident #{incident_id} Status Changed to {self.new_status}"
+
+    def build_body(self) -> str:
+        incident_id = self.data.get("id", "N/A")
+        title = self.data.get("title", "Unknown")
+        return (
+            f"Incident #{incident_id}: {title}\n"
+            f"New Status: {self.new_status}\n"
+            f"Changed by: {self.changed_by_name}\n\n"
+            f"View the incident details in the OpsCenter dashboard."
+        )
+
+
+class TaskAssignedNotificationBuilder(NotificationBuilder):
+    """Builder for task assigned notifications."""
+
+    def __init__(self, data: dict, assigner_name: str = "System"):
+        super().__init__(data)
+        self.assigner_name = assigner_name
+
+    def build_subject(self) -> str:
+        title = self.data.get("title", "Unknown Task")
+        return f"Task Assigned: {title}"
+
+    def build_body(self) -> str:
+        task_id = self.data.get("id", "N/A")
+        title = self.data.get("title", "Unknown")
+        incident_id = self.data.get("incident_id", "N/A")
+        return (
+            f"Task #{task_id}: {title}\n"
+            f"Related Incident: #{incident_id}\n"
+            f"Assigned by: {self.assigner_name}\n\n"
+            f"Please complete this task in the OpsCenter dashboard."
+        )
