@@ -60,7 +60,11 @@ def create_task(
     use_case = CreateTaskUseCase(task_repo, incident_repo, user_repo)
     try:
         return use_case.execute(data, creator_id=current_user.id)
-    except (ValueError, EntityNotFoundError, PermissionDeniedError) as e:
+    except EntityNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except PermissionDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
@@ -81,7 +85,11 @@ def update_task(
     use_case = UpdateTaskUseCase(task_repo, user_repo)
     try:
         return use_case.execute(task_id, updates, user_id=current_user.id)
-    except (ValueError, EntityNotFoundError, PermissionDeniedError) as e:
+    except EntityNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except PermissionDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
@@ -103,5 +111,9 @@ def update_task_status(
     use_case = UpdateTaskUseCase(task_repo, user_repo)
     try:
         return use_case.execute(task_id, updates, user_id=current_user.id)
-    except (ValueError, EntityNotFoundError, PermissionDeniedError) as e:
+    except EntityNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except PermissionDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

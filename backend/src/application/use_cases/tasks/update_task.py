@@ -1,6 +1,6 @@
 """Update task use case."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ...dtos.task_dto import TaskUpdate
 from ....domain.entities.task import Task
@@ -71,9 +71,13 @@ class UpdateTaskUseCase:
             # Changing assignee requires privilege
             if not is_privileged:
                 raise PermissionDeniedError("Only ADMIN/SUPERVISOR can reassign tasks")
+            # Validate that the new assignee exists
+            new_assignee = self.user_repository.find_by_id(updates.assigned_to)
+            if not new_assignee:
+                raise EntityNotFoundError("User", updates.assigned_to)
             task.assigned_to = updates.assigned_to
 
-        task.updated_at = datetime.now()
+        task.updated_at = datetime.now(timezone.utc)
 
         # Persist
         saved = self.task_repository.save(task)

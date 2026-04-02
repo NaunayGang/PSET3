@@ -1,8 +1,8 @@
 """Create task use case."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
-from ...dtos.task_dto import TaskCreate, TaskResponse
+from ...dtos.task_dto import TaskCreate
 from ....domain.entities.task import Task
 from ....domain.enums.task_status import TaskStatus
 from ....domain.repositories.task_repository import TaskRepository
@@ -74,8 +74,8 @@ class CreateTaskUseCase:
             description=data.description.strip(),
             status=TaskStatus.OPEN,
             assigned_to=None,  # Not assigned yet
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
 
         # Persist
