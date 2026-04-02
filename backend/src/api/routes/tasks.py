@@ -31,7 +31,7 @@ router = APIRouter()
 def list_tasks(
     current_user: Annotated[User, Depends(get_current_user)],
     task_repo: Annotated[TaskRepository, Depends(get_task_repository)],
-    incident_id: Annotated[int | None, Query(None, description="Filter tasks by incident ID")] = None,
+    incident_id: Annotated[int | None, Query(description="Filter tasks by incident ID")] = None,
 ):
     """
     List tasks with role-based filtering.
