@@ -9,9 +9,13 @@ from ..domain.entities.user import User
 from ..domain.enums.role import Role
 from ..domain.repositories.user_repository import UserRepository
 from ..domain.repositories.incident_repository import IncidentRepository
+from ..domain.repositories.task_repository import TaskRepository
+from ..domain.repositories.notification_repository import NotificationRepository
 from ..infrastructure.database.connection import get_db
 from ..infrastructure.repositories.sqlalchemy_user_repository import SQLAlchemyUserRepository
 from ..infrastructure.repositories.sqlalchemy_incident_repository import SQLAlchemyIncidentRepository
+from ..infrastructure.repositories.sqlalchemy_task_repository import SQLAlchemyTaskRepository
+from ..infrastructure.repositories.sqlalchemy_notification_repository import SQLAlchemyNotificationRepository
 from ..application.use_cases.auth.get_current_user import GetCurrentUserUseCase
 
 # OAuth2 scheme for token extraction
@@ -42,6 +46,32 @@ def get_incident_repository(db: Session = Depends(get_db)) -> IncidentRepository
         Incident repository instance
     """
     return SQLAlchemyIncidentRepository(db)
+
+
+def get_task_repository(db: Session = Depends(get_db)) -> TaskRepository:
+    """
+    Dependency for getting task repository.
+
+    Args:
+        db: Database session
+
+    Returns:
+        Task repository instance
+    """
+    return SQLAlchemyTaskRepository(db)
+
+
+def get_notification_repository(db: Session = Depends(get_db)) -> NotificationRepository:
+    """
+    Dependency for getting notification repository.
+
+    Args:
+        db: Database session
+
+    Returns:
+        Notification repository instance
+    """
+    return SQLAlchemyNotificationRepository(db)
 
 
 async def get_current_user(

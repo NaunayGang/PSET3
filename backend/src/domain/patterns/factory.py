@@ -18,6 +18,7 @@ from ..enums.notification_channel import NotificationChannel
 from ..enums.notification_status import NotificationStatus
 from ..enums.role import Role
 from ..enums.task_status import TaskStatus
+from .command import Command
 
 
 class EntityFactory:
@@ -238,11 +239,65 @@ class EntityFactory:
 
 
 class CommandFactory:
-    """Factory for creating command objects.
+    """
+    Factory for creating Command objects.
 
-    Note: Concrete command classes are defined in the infrastructure layer.
-    This factory will be extended there.
+    This is an Abstract Factory pattern for creating notification delivery commands.
     """
 
-    # Will be implemented in infrastructure layer where concrete commands exist
-    pass
+    def create_email_command(self, recipient: str, subject: str, body: str) -> Command:
+        """
+        Create an email notification command.
+
+        Args:
+            recipient: Email address
+            subject: Email subject
+            body: Email body
+
+        Returns:
+            EmailNotificationCommand
+        """
+        from ...infrastructure.notifications.email_sender import EmailNotificationCommand
+        return EmailNotificationCommand(recipient, subject, body)
+
+    def create_slack_command(self, webhook_url: str, message: str) -> Command:
+        """
+        Create a Slack notification command.
+
+        Args:
+            webhook_url: Slack webhook URL
+            message: Slack message
+
+        Returns:
+            SlackNotificationCommand
+        """
+        from ...infrastructure.notifications.slack_sender import SlackNotificationCommand
+        return SlackNotificationCommand(webhook_url, message)
+
+    def create_command(self, command_type: str, **kwargs) -> Command:
+        """
+        Create a command by type.
+
+        Args:
+            command_type: Type of command ('email' or 'slack')
+            **kwargs: Command-specific arguments
+
+        Returns:
+            Command instance
+
+        Raises:
+            ValueError: If command type is unknown
+        """
+        if command_type == "email":
+            return self.create_email_command(
+                recipient=kwargs.get("recipient"),
+                subject=kwargs.get("subject", ""),
+                body=kwargs.get("body", ""),
+            )
+        elif command_type == "slack":
+            return self.create_slack_command(
+                webhook_url=kwargs.get("webhook_url", ""),
+                message=kwargs.get("message", ""),
+            )
+        else:
+            raise ValueError(f"Unknown command type: {command_type}")
