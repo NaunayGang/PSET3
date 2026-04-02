@@ -33,6 +33,9 @@
             httpx
             requests
             python-multipart
+            python-jose
+            passlib
+            bcrypt
           ]
         );
       in

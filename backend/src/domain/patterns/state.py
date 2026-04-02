@@ -108,19 +108,26 @@ class IncidentStateMachine:
         IncidentStatus.CLOSED: ClosedState,
     }
 
+    def __init__(self, initial_status: IncidentStatus = IncidentStatus.OPEN):
+        """Initialize machine with current incident state."""
+        self.current_state = initial_status
+
+    def can_transition_to(self, target_status: IncidentStatus) -> bool:
+        """Check if transition from current state to target is allowed."""
+        return self.can_transition(self.current_state, target_status)
+
+    def transition_to(self, target_status: IncidentStatus) -> None:
+        """Transition to target state if valid; otherwise raise error."""
+        if not self.can_transition_to(target_status):
+            raise ValueError(
+                f"Invalid state transition: {self.current_state.value} -> {target_status.value}"
+            )
+        self.current_state = target_status
+
     def can_transition(
         self, current_status: IncidentStatus, target_status: IncidentStatus
     ) -> bool:
-        """
-        Check if transition from current to target status is allowed.
-
-        Args:
-            current_status: Current incident status
-            target_status: Desired target status
-
-        Returns:
-            True if transition is valid, False otherwise
-        """
+        """Check if transition from current to target status is allowed."""
         # Allow staying in same state
         if current_status == target_status:
             return True
@@ -132,15 +139,7 @@ class IncidentStateMachine:
         return current_state.can_transition_to(target_state_class)
 
     def get_allowed_transitions(self, current_status: IncidentStatus) -> List[IncidentStatus]:
-        """
-        Get list of allowed status transitions from current status.
-
-        Args:
-            current_status: Current incident status
-
-        Returns:
-            List of allowed target statuses
-        """
+        """Get list of allowed status transitions from current status."""
         current_state_class = self._state_map[current_status]
         current_state = current_state_class()
         allowed_state_classes = current_state.get_allowed_transitions()
