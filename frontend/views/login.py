@@ -27,7 +27,7 @@ def render_login_view() -> None:
 
     try:
         login_response = api_client.post_form(
-            "/login",
+            "/auth/login",
             {
                 "username": email,
                 "password": password,
@@ -40,7 +40,7 @@ def render_login_view() -> None:
             return
 
         st.session_state.token = access_token
-        me_response = api_client.get("/me")
+        me_response = api_client.get("/auth/me")
 
         role = me_response.get("role") or login_response.get("role")
         if not role:
