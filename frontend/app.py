@@ -21,7 +21,8 @@ def render_sidebar() -> None:
     st.sidebar.title("OpsCenter")
 
     user = st.session_state.user or {}
-    st.sidebar.caption(f"User: {user.get('email', 'N/A')}")
+    display_name = user.get("name") or user.get("email") or "N/A"
+    st.sidebar.caption(f"User: {display_name}")
     st.sidebar.caption(f"Role: {st.session_state.role or 'N/A'}")
 
     available_views = [

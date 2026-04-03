@@ -26,14 +26,25 @@ class APIClient:
             headers["Authorization"] = f"Bearer {token}"
         return headers
 
-    def _request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any] | list[Any]:
+    def _request(
+        self,
+        method: str,
+        path: str,
+        payload: dict[str, Any] | None = None,
+        form_payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | list[Any]:
         url = f"{self.base_url.rstrip('/')}/{path.lstrip('/')}"
+        request_headers = self._build_headers()
+        if form_payload is not None:
+            request_headers = {key: value for key, value in request_headers.items() if key != "Content-Type"}
+
         try:
             response = requests.request(
                 method=method,
                 url=url,
                 json=payload,
-                headers=self._build_headers(),
+                data=form_payload,
+                headers=request_headers,
                 timeout=15,
             )
         except requests.RequestException as exc:
@@ -56,7 +67,10 @@ class APIClient:
         return self._request("GET", path)
 
     def post(self, path: str, payload: dict[str, Any]) -> dict[str, Any] | list[Any]:
-        return self._request("POST", path, payload)
+        return self._request("POST", path, payload=payload)
+
+    def post_form(self, path: str, payload: dict[str, Any]) -> dict[str, Any] | list[Any]:
+        return self._request("POST", path, form_payload=payload)
 
     def patch(self, path: str, payload: dict[str, Any]) -> dict[str, Any] | list[Any]:
-        return self._request("PATCH", path, payload)
+        return self._request("PATCH", path, payload=payload)
