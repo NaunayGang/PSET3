@@ -5,16 +5,17 @@ from .routes.auth import router as auth_router
 from .routes.incidents import router as incidents_router
 from .routes.tasks import router as tasks_router
 from .routes.notifications import router as notifications_router
+from ..config import settings
 
 app = FastAPI(title="OpsCenter API")
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.cors_origins,
+    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
+    allow_methods=settings.cors_methods,
+    allow_headers=settings.cors_headers,
 )
 
 # Include routers
