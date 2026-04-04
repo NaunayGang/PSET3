@@ -22,12 +22,6 @@ def seed_initial_users():
     try:
         user_repo = SQLAlchemyUserRepository(db)
 
-        # Check if any users exist
-        existing = user_repo.list_all()
-        if existing:
-            print("Database already has users, skipping seed.")
-            return
-
         # Create initial users
         initial_users = [
             {
@@ -50,8 +44,15 @@ def seed_initial_users():
             },
         ]
 
+        created_count = 0
+        skipped_count = 0
         for user_data in initial_users:
-            hashed = hash_password(user_data.pop("password"))
+            if user_repo.find_by_email(user_data["email"]):
+                skipped_count += 1
+                print(f"Skipped existing user: {user_data['email']}")
+                continue
+
+            hashed = hash_password(user_data["password"])
             user = User(
                 id=None,
                 name=user_data["name"],
@@ -61,9 +62,10 @@ def seed_initial_users():
                 created_at=None,
             )
             user_repo.save(user)
+            created_count += 1
             print(f"Created user: {user.email}")
 
-        print("✅ Seeded initial users successfully")
+        print(f"✅ Seed completed. Created: {created_count}, Skipped: {skipped_count}")
     finally:
         db.close()
 
