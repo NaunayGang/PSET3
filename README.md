@@ -129,7 +129,7 @@ Role behavior summary:
 - Location: domain factory module.
 - Usage: use cases create Incident, Task, Notification entities through factory methods to keep construction and validation rules consistent.
 
-## Abstrac Factory pattern
+## Abstract Factory pattern
 
 The project uses a factory abstraction for command creation (`CommandFactory`) and entity construction (`EntityFactory`). The justification is:
 
