@@ -56,11 +56,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1774709303,
-        "narHash": "sha256-D3Q07BbIA2KnTcSXIqqu9P586uWxN74zNoCH3h2ESHg=",
+        "lastModified": 1775036866,
+        "narHash": "sha256-ZojAnPuCdy657PbTq5V0Y+AHKhZAIwSIT2cb8UgAz/U=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "8110df5ad7abf5d4c0f6fb0f8f978390e77f9685",
+        "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
         "type": "github"
       },
       "original": {
@@ -72,11 +72,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1774709303,
-        "narHash": "sha256-D3Q07BbIA2KnTcSXIqqu9P586uWxN74zNoCH3h2ESHg=",
+        "lastModified": 1775036866,
+        "narHash": "sha256-ZojAnPuCdy657PbTq5V0Y+AHKhZAIwSIT2cb8UgAz/U=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "8110df5ad7abf5d4c0f6fb0f8f978390e77f9685",
+        "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
         "type": "github"
       },
       "original": {
@@ -125,11 +125,11 @@
         "tern-src": "tern-src"
       },
       "locked": {
-        "lastModified": 1773154768,
-        "narHash": "sha256-jERSgo8DMRD8GuehmRk8IAT9nj8rNGXlOC2JL7cN1oc=",
+        "lastModified": 1775401287,
+        "narHash": "sha256-Wi/sW2tcAcdTRzjie5vx0hE/0dk1qOInXHxW+CfciBk=",
         "ref": "refs/heads/master",
-        "rev": "575f2be8728340167e5f3586ca645c01ffc48d39",
-        "revCount": 23,
+        "rev": "4d46c469738635f0be3b0fb324f830650791817b",
+        "revCount": 30,
         "type": "git",
         "url": "https://codeberg.org/yuuhikaze/resources"
       },
