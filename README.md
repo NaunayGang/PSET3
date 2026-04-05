@@ -10,7 +10,7 @@ OpsCenter provides:
 - Notification records tied to system events.
 - An API + UI stack that enforces consistent process.
 
-## Architechture
+## Architecture
 
 The project follows a Hexagonal Architecture (Ports and Adapters) with strict separation of concerns.
 
@@ -41,8 +41,6 @@ Core stack:
 - Containerization: Docker and Docker Compose.
 
 ## How to run
-
-### Option 1: Docker Compose (recommended)
 
 1. Copy environment file:
 
