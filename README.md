@@ -1,138 +1,143 @@
 # OpsCenter
 
-OpsCenter is an incident management platform for the USFQ System Design project.
+OpsCenter is an incident and task management platform created for the USFQ System Design project. It replaces informal incident handling (messages and spreadsheets) with a centralized workflow that supports authentication, traceability, assignments, lifecycle management, and notifications.
 
-## Environment setup
+OpsCenter provides:
 
-Use the root `.env.example` as the base template for local development.
+- A central incident register with defined severity and status.
+- Role-based workflows for ADMIN, SUPERVISOR, and OPERATOR.
+- Linked tasks for execution and follow-up.
+- Notification records tied to system events.
+- An API + UI stack that enforces consistent process.
 
-1. Copy `.env.example` to `.env` and adjust values.
-2. For backend-only local execution, you can also use [backend/.env.example](backend/.env.example).
-3. For frontend-only local execution, you can also use [frontend/.env.example](frontend/.env.example).
+## Architechture
 
-### Required variables
+The project follows a Hexagonal Architecture (Ports and Adapters) with strict separation of concerns.
 
-- `DATABASE_URL`: PostgreSQL connection string used by backend.
-- `SECRET_KEY`: JWT signing key.
-- `API_BASE_URL`: Base URL used by Streamlit frontend.
-- `LOG_LEVEL`: Logging verbosity.
-- `CORS_ALLOW_ORIGINS`, `CORS_ALLOW_METHODS`, `CORS_ALLOW_HEADERS`, `CORS_ALLOW_CREDENTIALS`.
+- Domain layer (`backend/src/domain`):
+	- Entities: User, Incident, Task, Notification.
+	- Enums and business rules.
+	- Repository interfaces (ports).
+	- Design patterns (Observer, Command, State, Template Method, Factory).
+- Application layer (`backend/src/application`):
+	- Use cases that orchestrate business flows.
+	- DTOs for request and response contracts.
+- Infrastructure layer (`backend/src/infrastructure`):
+	- SQLAlchemy models and repository implementations.
+	- Auth adapters (JWT, password hashing).
+	- Notification senders and event bus implementation.
+- API layer (`backend/src/api`):
+	- FastAPI routes and dependency injection.
+	- Token-based authentication and role checks.
+- Frontend (`frontend`):
+	- Streamlit app with views for Login, Incidents, Tasks, and Notifications.
 
-## Environment variable loading
+Core stack:
 
-- Backend uses `pydantic-settings` plus `python-dotenv` to load values from `.env`.
-- Frontend client uses `python-dotenv` to load `API_BASE_URL`.
+- Backend: Python 3.11, FastAPI, SQLAlchemy.
+- Frontend: Streamlit.
+- Database: PostgreSQL.
+- Migrations: Alembic.
+- Containerization: Docker and Docker Compose.
 
-## Dockerfiles
+## How to run
 
-- API image: [backend/Dockerfile](backend/Dockerfile)
-- UI image: [frontend/Dockerfile](frontend/Dockerfile)
+### Option 1: Docker Compose (recommended)
 
-Build examples:
+1. Copy environment file:
 
 ```bash
-docker build -t opscenter-api ./backend
-docker build -t opscenter-ui ./frontend
+cp .env.example .env
 ```
 
-## Docker Compose setup
-
-This repository includes a full Docker Compose stack with three services:
-
-- db: PostgreSQL 15 with persistent volume
-- api: FastAPI backend
-- ui: Streamlit frontend
-
-### Prerequisites
-
-- Docker Desktop (or Docker Engine + Compose plugin)
-
-### Environment configuration
-
-1. Copy [.env.example](.env.example) to .env.
-2. Adjust values only if needed.
-
-### Run all services
+2. Start all services:
 
 ```bash
 docker compose up --build
 ```
 
-### Service endpoints
+3. Access services:
 
 - API: http://localhost:8000
-- UI: http://localhost:8501
-- Postgres: localhost:5432
+- Frontend UI: http://localhost:8501
+- PostgreSQL: localhost:5432
 
-### Health checks
-
-- db: pg_isready
-- api: GET /
-- ui: GET /_stcore/health
-
-### Stop services
+4. Stop services:
 
 ```bash
 docker compose down
 ```
 
-### Remove all data volumes
+5. Remove volumes (optional reset):
 
 ```bash
 docker compose down -v
 ```
 
-## Database migrations and seed
+## How to use
 
-This project uses Alembic for schema migrations.
+1. Open the Streamlit UI at http://localhost:8501.
+2. Log in with a seeded account:
+	 - `admin@opscenter.com`
+	 - `supervisor@opscenter.com`
+	 - `operator@opscenter.com`
+	 - Password for all: `password123`
+3. Navigate through modules in the sidebar:
+	 - Incidents: list incidents, create new incidents (role dependent), assign incident, change status.
+	 - Tasks: create tasks linked to incidents, filter tasks, update task status.
+	 - Notifications: list notifications and update notification status.
+4. Use API directly (optional):
+	 - Authenticate via `POST /auth/login`.
+	 - Get current user with `GET /auth/me`.
+	 - Manage incidents via `/incidents` routes.
+	 - Manage tasks via `/tasks` routes.
+	 - Manage notifications via `/notifications` routes.
 
-### Backend setup
+Role behavior summary:
 
-```bash
-cd backend
-pip install -r requirements.txt
-```
+- ADMIN: full visibility and control.
+- SUPERVISOR: manages assignments and status workflows.
+- OPERATOR: creates incidents and updates allowed tasks, with restricted visibility.
 
-### Configure database connection
+## Used patterns
 
-Set `DATABASE_URL` in your environment or in `backend/.env`.
+1. Observer pattern
 
-Example:
+- Purpose: react to domain events and trigger side effects.
+- Location: event bus and observers under domain/infrastructure event modules.
+- Usage: notification observer listens to events such as incident created, assigned, or status changed.
 
-```bash
-DATABASE_URL=postgresql://opscenter:opscenter@localhost:5432/opscenter
-```
+2. Command pattern
 
-### Run migrations
+- Purpose: encapsulate notification delivery actions behind `execute()`.
+- Location: command interface in domain pattern module; concrete commands for email/slack in infrastructure notification adapters.
+- Usage: observers create and execute delivery commands.
 
-```bash
-cd backend
-python scripts/migrate.py
-```
+3. State pattern
 
-Equivalent Alembic command:
+- Purpose: enforce valid incident status transitions.
+- Location: incident state machine in domain pattern module.
+- Usage: incident status change use case validates lifecycle transitions (OPEN -> ASSIGNED -> IN_PROGRESS -> RESOLVED -> CLOSED, with allowed backward moves where modeled).
 
-```bash
-cd backend
-alembic upgrade head
-```
+4. Template Method pattern
 
-### Seed required test users
+- Purpose: standardize how notification messages are constructed.
+- Location: base notification builder and concrete builders for incident/task events.
+- Usage: observers use builders to generate subject/body/footer consistently per event type.
 
-```bash
-cd backend
-python scripts/seed_data.py
-```
+5. Factory pattern
 
-Users seeded (password: `password123`):
+- Purpose: centralize entity creation and validation.
+- Location: domain factory module.
+- Usage: use cases create Incident, Task, Notification entities through factory methods to keep construction and validation rules consistent.
 
-- `admin@opscenter.com` (ADMIN)
-- `supervisor@opscenter.com` (SUPERVISOR)
-- `operator@opscenter.com` (OPERATOR)
+## Abstrac Factory pattern
 
-### One-step bootstrap (migrate + seed)
+The project uses a factory abstraction for command creation (`CommandFactory`) and entity construction (`EntityFactory`). The justification is:
 
-```bash
-cd backend
-python scripts/bootstrap_db.py
-```
+- Decoupling: application and domain flows depend on abstractions, not concrete senders or raw constructors.
+- Consistency: one place controls creation rules and validation for core objects.
+- Extensibility: new notification channels or command types can be added without changing use case logic.
+- Testability: factories make it easy to inject test doubles/mocks instead of infrastructure dependencies.
+
+In practical terms, the command factory acts as an Abstract Factory-style mechanism for creating families of related command objects (email/slack delivery commands) behind a common interface.
