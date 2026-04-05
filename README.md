@@ -15,22 +15,22 @@ OpsCenter provides:
 The project follows a Hexagonal Architecture (Ports and Adapters) with strict separation of concerns.
 
 - Domain layer (`backend/src/domain`):
-	- Entities: User, Incident, Task, Notification.
-	- Enums and business rules.
-	- Repository interfaces (ports).
-	- Design patterns (Observer, Command, State, Template Method, Factory).
+  - Entities: User, Incident, Task, Notification.
+  - Enums and business rules.
+  - Repository interfaces (ports).
+  - Design patterns (Observer, Command, State, Template Method, Factory).
 - Application layer (`backend/src/application`):
-	- Use cases that orchestrate business flows.
-	- DTOs for request and response contracts.
+  - Use cases that orchestrate business flows.
+  - DTOs for request and response contracts.
 - Infrastructure layer (`backend/src/infrastructure`):
-	- SQLAlchemy models and repository implementations.
-	- Auth adapters (JWT, password hashing).
-	- Notification senders and event bus implementation.
+  - SQLAlchemy models and repository implementations.
+  - Auth adapters (JWT, password hashing).
+  - Notification senders and event bus implementation.
 - API layer (`backend/src/api`):
-	- FastAPI routes and dependency injection.
-	- Token-based authentication and role checks.
+  - FastAPI routes and dependency injection.
+  - Token-based authentication and role checks.
 - Frontend (`frontend`):
-	- Streamlit app with views for Login, Incidents, Tasks, and Notifications.
+  - Streamlit app with views for Login, Incidents, Tasks, and Notifications.
 
 Core stack:
 
