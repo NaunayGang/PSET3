@@ -42,11 +42,28 @@ Core stack:
 
 ## How to run
 
-1. Copy environment file:
+1. Prepare environment file for Docker Compose:
 
 ```bash
 cp .env.example .env
 ```
+
+Important:
+
+- Do not keep localhost-based container variables in `.env` when running with Docker Compose.
+- `DATABASE_URL` and `API_BASE_URL` with `localhost` will break inter-container communication.
+- Either leave those variables unset in `.env` (so `docker-compose.yml` defaults are used) or set them to Docker Compose hosts:
+	- `DATABASE_URL=postgresql://opscenter:opscenter@db:5432/opscenter`
+	- `API_BASE_URL=http://api:8000`
+
+Quick safe option after copying `.env.example`:
+
+```bash
+sed -i '/^DATABASE_URL=/d' .env
+sed -i '/^API_BASE_URL=/d' .env
+```
+
+This makes Docker Compose use its internal defaults (`db` and `api`) defined in `docker-compose.yml`.
 
 2. Start all services:
 
@@ -54,23 +71,39 @@ cp .env.example .env
 docker compose up --build
 ```
 
-3. Access services:
+3. Bootstrap database (migrations + seed users):
+
+```bash
+docker compose exec api python scripts/bootstrap_db.py
+```
+
+If you are running in a non-interactive shell, use:
+
+```bash
+docker compose exec -T api python scripts/bootstrap_db.py
+```
+
+Note: the current API container startup runs Uvicorn only; it does not auto-run migrations/seeding.
+
+4. Access services:
 
 - API: http://localhost:8000
 - Frontend UI: http://localhost:8501
 - PostgreSQL: localhost:5432
 
-4. Stop services:
+5. Stop services:
 
 ```bash
 docker compose down
 ```
 
-5. Remove volumes (optional reset):
+6. Remove volumes (optional reset):
 
 ```bash
 docker compose down -v
 ```
+
+After `docker compose down -v`, run the bootstrap command again on next startup.
 
 ## How to use
 
