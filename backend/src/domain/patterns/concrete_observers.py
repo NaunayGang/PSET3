@@ -214,9 +214,23 @@ class NotificationObserver(Observer):
 
         try:
             command.execute()
+        except Exception:
+            try:
+                self.notification_repo.update_status(notification_id, NotificationStatus.FAILED)
+            except Exception:
+                logger.exception(
+                    "Failed to persist FAILED status for notification %s after delivery error",
+                    notification_id,
+                )
+            raise
+
+        try:
             self.notification_repo.update_status(notification_id, NotificationStatus.SENT)
         except Exception:
-            self.notification_repo.update_status(notification_id, NotificationStatus.FAILED)
+            logger.exception(
+                "Notification %s was delivered, but persisting SENT status failed",
+                notification_id,
+            )
             raise
 
     def _handle_task_created(self, event: DomainEvent) -> None:
