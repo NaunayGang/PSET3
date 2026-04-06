@@ -205,8 +205,11 @@ class NotificationObserver(Observer):
     def _execute_with_status_update(self, notification_id: int | None, command) -> None:
         """Execute a delivery command and persist final notification status."""
         if notification_id is None:
-            # Should not happen for persisted notifications, but keep flow resilient.
-            command.execute()
+            # Do not send untracked notifications; delivery status cannot be persisted.
+            logger.error(
+                "Skipping notification delivery because notification was not persisted "
+                "and has no id for status tracking."
+            )
             return
 
         try:
