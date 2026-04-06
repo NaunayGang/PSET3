@@ -18,7 +18,8 @@ from ...domain.repositories.incident_repository import IncidentRepository
 from ...domain.repositories.user_repository import UserRepository
 from ...domain.entities.user import User
 from ...domain.exceptions import EntityNotFoundError, InvalidStateTransitionError
-from ..dependencies import get_incident_repository, get_user_repository, get_current_user
+from ...infrastructure.events.event_bus import EventBus
+from ..dependencies import get_incident_repository, get_user_repository, get_current_user, get_event_bus
 
 router = APIRouter()
 
@@ -63,13 +64,14 @@ def create_incident(
     data: IncidentCreate,
     current_user: Annotated[User, Depends(get_current_user)],
     incident_repo: Annotated[IncidentRepository, Depends(get_incident_repository)],
+    event_bus: Annotated[EventBus, Depends(get_event_bus)],
 ):
     """
     Create a new incident.
 
     Any authenticated user can create incidents (OPERATOR and above).
     """
-    use_case = CreateIncidentUseCase(incident_repo)
+    use_case = CreateIncidentUseCase(incident_repo, event_bus=event_bus)
     try:
         return use_case.execute(data, created_by=current_user.id)
     except ValueError as e:

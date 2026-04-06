@@ -16,6 +16,8 @@ from ..infrastructure.repositories.sqlalchemy_user_repository import SQLAlchemyU
 from ..infrastructure.repositories.sqlalchemy_incident_repository import SQLAlchemyIncidentRepository
 from ..infrastructure.repositories.sqlalchemy_task_repository import SQLAlchemyTaskRepository
 from ..infrastructure.repositories.sqlalchemy_notification_repository import SQLAlchemyNotificationRepository
+from ..infrastructure.events.event_bus import EventBus
+from ..infrastructure.events.setup import initialize_event_system
 from ..application.use_cases.auth.get_current_user import GetCurrentUserUseCase
 
 # OAuth2 scheme for token extraction
@@ -72,6 +74,19 @@ def get_notification_repository(db: Session = Depends(get_db)) -> NotificationRe
         Notification repository instance
     """
     return SQLAlchemyNotificationRepository(db)
+
+
+def get_event_bus(db: Session = Depends(get_db)) -> EventBus:
+    """
+    Dependency for getting an initialized event bus.
+
+    Args:
+        db: Database session
+
+    Returns:
+        Event bus with observers attached
+    """
+    return initialize_event_system(db)
 
 
 async def get_current_user(
