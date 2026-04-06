@@ -117,7 +117,7 @@ class NotificationObserver(Observer):
             subject=builder.build_subject(),
             body=builder.build_body(),
         )
-        command.execute()
+        self._execute_with_status_update(notification.id, command)
 
     def _handle_incident_assigned(self, event: DomainEvent) -> None:
         """Handle incident assigned event."""
@@ -155,7 +155,7 @@ class NotificationObserver(Observer):
             subject=builder.build_subject(),
             body=builder.build_body(),
         )
-        command.execute()
+        self._execute_with_status_update(notification.id, command)
 
     def _handle_incident_status_changed(self, event: DomainEvent) -> None:
         """Handle incident status changed event."""
@@ -188,7 +188,7 @@ class NotificationObserver(Observer):
             )
             message = builder.build_notification()
 
-            self._create_notification(
+            notification = self._create_notification(
                 recipient_id=recipient.id,
                 channel=NotificationChannel.EMAIL,
                 message=message,
@@ -200,7 +200,21 @@ class NotificationObserver(Observer):
                 subject=builder.build_subject(),
                 body=builder.build_body(),
             )
+            self._execute_with_status_update(notification.id, command)
+
+    def _execute_with_status_update(self, notification_id: int | None, command) -> None:
+        """Execute a delivery command and persist final notification status."""
+        if notification_id is None:
+            # Should not happen for persisted notifications, but keep flow resilient.
             command.execute()
+            return
+
+        try:
+            command.execute()
+            self.notification_repo.update_status(notification_id, NotificationStatus.SENT)
+        except Exception:
+            self.notification_repo.update_status(notification_id, NotificationStatus.FAILED)
+            raise
 
     def _handle_task_created(self, event: DomainEvent) -> None:
         """Handle task created event."""
