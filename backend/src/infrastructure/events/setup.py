@@ -3,27 +3,30 @@
 This module sets up the event bus with all observers on application startup.
 """
 
-from ...domain.patterns.observer import Observer
 from .event_bus import EventBus
-from ...infrastructure.notifications.email_sender import EmailNotificationCommand
-from ...infrastructure.notifications.slack_sender import SlackNotificationCommand
 from ...domain.patterns.factory import CommandFactory
-from ...infrastructure.repositories.sqlalchemy_user_repository import SQLAlchemyUserRepository
-from ...infrastructure.repositories.sqlalchemy_notification_repository import SQLAlchemyNotificationRepository
-from ...infrastructure.repositories.sqlalchemy_incident_repository import SQLAlchemyIncidentRepository
 from ...domain.patterns.concrete_observers import NotificationObserver
-from sqlalchemy.orm import Session
+from ...domain.repositories.notification_repository import NotificationRepository
+from ...domain.repositories.user_repository import UserRepository
+from ...domain.repositories.incident_repository import IncidentRepository
+from ...domain.repositories.task_repository import TaskRepository
 
 
 def initialize_event_system(
-    db: Session,
+    notification_repo: NotificationRepository,
+    user_repo: UserRepository,
+    incident_repo: IncidentRepository,
+    task_repo: TaskRepository,
     event_bus: EventBus | None = None,
 ) -> EventBus:
     """
     Initialize event system with all observers and commands.
 
     Args:
-        db: Database session for repositories
+        notification_repo: Notification repository
+        user_repo: User repository
+        incident_repo: Incident repository
+        task_repo: Task repository
         event_bus: Optional existing event bus (creates new if None)
 
     Returns:
@@ -31,11 +34,6 @@ def initialize_event_system(
     """
     if event_bus is None:
         event_bus = EventBus()
-
-    # Create repositories
-    user_repo = SQLAlchemyUserRepository(db)
-    notification_repo = SQLAlchemyNotificationRepository(db)
-    incident_repo = SQLAlchemyIncidentRepository(db)
 
     # Create command factory
     command_factory = CommandFactory()
@@ -48,6 +46,7 @@ def initialize_event_system(
         notification_repo=notification_repo,
         user_repo=user_repo,
         incident_repo=incident_repo,
+        task_repo=task_repo,
         command_factory=command_factory,
     )
     event_bus.attach(notification_observer)

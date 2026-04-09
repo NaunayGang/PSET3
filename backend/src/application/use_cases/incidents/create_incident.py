@@ -1,10 +1,12 @@
 """Create incident use case."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ...dtos.incident_dto import IncidentCreate, IncidentResponse
 from ....domain.entities.incident import Incident
+from ....domain.enums.event_type import EventType
 from ....domain.enums.incident_status import IncidentStatus
+from ....domain.patterns.observer import Subject, DomainEvent
 from ....domain.repositories.incident_repository import IncidentRepository
 from ....domain.patterns.factory import EntityFactory
 
@@ -16,6 +18,7 @@ class CreateIncidentUseCase:
         self,
         incident_repository: IncidentRepository,
         factory: EntityFactory | None = None,
+        event_publisher: Subject | None = None,
     ):
         """
         Initialize use case.
@@ -26,6 +29,7 @@ class CreateIncidentUseCase:
         """
         self.incident_repository = incident_repository
         self.factory = factory or EntityFactory()
+        self.event_publisher = event_publisher
 
     def execute(self, data: IncidentCreate, created_by: int) -> Incident:
         """
@@ -62,4 +66,17 @@ class CreateIncidentUseCase:
 
         # Persist
         saved = self.incident_repository.save(incident)
+
+        if self.event_publisher is not None:
+            self.event_publisher.notify(
+                DomainEvent(
+                    event_type=EventType.INCIDENT_CREATED,
+                    data={
+                        "incident_id": saved.id,
+                        "created_by": saved.created_by,
+                    },
+                    timestamp=datetime.now(timezone.utc),
+                )
+            )
+
         return saved

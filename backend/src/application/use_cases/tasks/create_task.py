@@ -4,7 +4,9 @@ from datetime import datetime, timezone
 
 from ...dtos.task_dto import TaskCreate
 from ....domain.entities.task import Task
+from ....domain.enums.event_type import EventType
 from ....domain.enums.task_status import TaskStatus
+from ....domain.patterns.observer import Subject, DomainEvent
 from ....domain.repositories.task_repository import TaskRepository
 from ....domain.repositories.incident_repository import IncidentRepository
 from ....domain.repositories.user_repository import UserRepository
@@ -21,6 +23,7 @@ class CreateTaskUseCase:
         incident_repository: IncidentRepository,
         user_repository: UserRepository,
         factory: EntityFactory | None = None,
+        event_publisher: Subject | None = None,
     ):
         """
         Initialize use case.
@@ -35,6 +38,7 @@ class CreateTaskUseCase:
         self.incident_repository = incident_repository
         self.user_repository = user_repository
         self.factory = factory or EntityFactory()
+        self.event_publisher = event_publisher
 
     def execute(self, data: TaskCreate, creator_id: int) -> Task:
         """
@@ -80,4 +84,18 @@ class CreateTaskUseCase:
 
         # Persist
         saved = self.task_repository.save(task)
+
+        if self.event_publisher is not None:
+            self.event_publisher.notify(
+                DomainEvent(
+                    event_type=EventType.TASK_CREATED,
+                    data={
+                        "task_id": saved.id,
+                        "incident_id": saved.incident_id,
+                        "creator_id": creator_id,
+                    },
+                    timestamp=datetime.now(timezone.utc),
+                )
+            )
+
         return saved
