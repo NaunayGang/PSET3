@@ -41,7 +41,12 @@
       in
       {
         devShells.default = pkgs.mkShell {
-          inputsFrom = [ resources.outputs.devShells.${system}.docs ];
+          inputsFrom = [
+            (resources.outputs.devShells.${system}.docs-converters {
+              withPandoc = true;
+            })
+            resources.outputs.devShells.${system}.docs-templates
+          ];
           buildInputs = [
             pythonEnv
             pkgs.docker
@@ -49,10 +54,15 @@
             pkgs.git
           ];
           shellHook = ''
-             echo "====== OpsCenter PSET3 Development Environment ======="
+            tput setaf 2
+            echo "========= PSET3 Development Environment =========="
+            tput sgr0
+            tput dim
             echo "Python: $(python --version)"
             echo "Docker: $(docker --version)"
-            echo "============================================"
+            tput sgr0
+            tput setaf 2
+            echo "=================================================="
           '';
         };
       }

@@ -9,6 +9,7 @@ from ....domain.enums.incident_status import IncidentStatus
 from ....domain.patterns.observer import Subject, DomainEvent
 from ....domain.repositories.incident_repository import IncidentRepository
 from ....domain.patterns.factory import EntityFactory
+from ....infrastructure.events.event_bus import EventBus
 
 
 class CreateIncidentUseCase:
