@@ -3,17 +3,26 @@
 These observers react to domain events and perform actions like creating notifications.
 """
 
-from typing import Optional
 from ...domain.patterns.observer import Observer, DomainEvent
 from ...domain.patterns.factory import EntityFactory, CommandFactory
 from ...domain.enums.event_type import EventType
 from ...domain.repositories.notification_repository import NotificationRepository
 from ...domain.repositories.user_repository import UserRepository
 from ...domain.repositories.incident_repository import IncidentRepository
+from ...domain.repositories.task_repository import TaskRepository
+from ...domain.entities.user import User
 from ...domain.entities.notification import Notification
 from ...domain.enums.notification_channel import NotificationChannel
 from ...domain.enums.notification_status import NotificationStatus
-from ...domain.patterns.template_method import NotificationBuilder
+from ...domain.patterns.template_method import (
+    IncidentAssignedNotificationBuilder,
+    IncidentCreatedNotificationBuilder,
+    IncidentStatusChangedNotificationBuilder,
+    NotificationBuilder,
+    TaskAssignedNotificationBuilder,
+    TaskCreatedNotificationBuilder,
+    TaskDoneNotificationBuilder,
+)
 from ...infrastructure.notifications.email_sender import EmailNotificationCommand
 from ...infrastructure.notifications.slack_sender import SlackNotificationCommand
 import logging
@@ -37,6 +46,7 @@ class NotificationObserver(Observer):
         notification_repo: NotificationRepository,
         user_repo: UserRepository,
         incident_repo: IncidentRepository,
+        task_repo: TaskRepository,
         command_factory: CommandFactory,
     ):
         """
@@ -51,7 +61,9 @@ class NotificationObserver(Observer):
         self.notification_repo = notification_repo
         self.user_repo = user_repo
         self.incident_repo = incident_repo
+        self.task_repo = task_repo
         self.command_factory = command_factory
+        self.entity_factory = EntityFactory()
 
         # Register command types with factory
         self.command_factory.create_email_command = self._create_email_command
@@ -75,6 +87,8 @@ class NotificationObserver(Observer):
                 self._handle_incident_status_changed(event)
             elif event.event_type == EventType.TASK_CREATED:
                 self._handle_task_created(event)
+            elif event.event_type == EventType.TASK_ASSIGNED:
+                self._handle_task_assigned(event)
             elif event.event_type == EventType.TASK_DONE:
                 self._handle_task_done(event)
         except Exception as e:
@@ -103,21 +117,11 @@ class NotificationObserver(Observer):
         })
         message = builder.build_notification()
 
-        # Create notification entity
-        notification = self._create_notification(
-            recipient_id=recipient.id,
-            channel=NotificationChannel.EMAIL,
-            message=message,
+        self._deliver_email_notification(
+            recipient=recipient,
+            builder=builder,
             event_type=EventType.INCIDENT_CREATED,
         )
-
-        # Send via command
-        command = self._create_email_command(
-            recipient=recipient.email,
-            subject=builder.build_subject(),
-            body=builder.build_body(),
-        )
-        self._execute_with_status_update(notification.id, command)
 
     def _handle_incident_assigned(self, event: DomainEvent) -> None:
         """Handle incident assigned event."""
@@ -143,19 +147,11 @@ class NotificationObserver(Observer):
         )
         message = builder.build_notification()
 
-        notification = self._create_notification(
-            recipient_id=recipient.id,
-            channel=NotificationChannel.EMAIL,
-            message=message,
+        self._deliver_email_notification(
+            recipient=recipient,
+            builder=builder,
             event_type=EventType.INCIDENT_ASSIGNED,
         )
-
-        command = self._create_email_command(
-            recipient=recipient.email,
-            subject=builder.build_subject(),
-            body=builder.build_body(),
-        )
-        self._execute_with_status_update(notification.id, command)
 
     def _handle_incident_status_changed(self, event: DomainEvent) -> None:
         """Handle incident status changed event."""
@@ -188,62 +184,111 @@ class NotificationObserver(Observer):
             )
             message = builder.build_notification()
 
-            notification = self._create_notification(
-                recipient_id=recipient.id,
-                channel=NotificationChannel.EMAIL,
-                message=message,
+            self._deliver_email_notification(
+                recipient=recipient,
+                builder=builder,
                 event_type=EventType.INCIDENT_STATUS_CHANGED,
             )
-
-            command = self._create_email_command(
-                recipient=recipient.email,
-                subject=builder.build_subject(),
-                body=builder.build_body(),
-            )
-            self._execute_with_status_update(notification.id, command)
-
-    def _execute_with_status_update(self, notification_id: int | None, command) -> None:
-        """Execute a delivery command and persist final notification status."""
-        if notification_id is None:
-            # Do not send untracked notifications; delivery status cannot be persisted.
-            logger.error(
-                "Skipping notification delivery because notification was not persisted "
-                "and has no id for status tracking."
-            )
-            return
-
-        try:
-            command.execute()
-        except Exception:
-            try:
-                self.notification_repo.update_status(notification_id, NotificationStatus.FAILED)
-            except Exception:
-                logger.exception(
-                    "Failed to persist FAILED status for notification %s after delivery error",
-                    notification_id,
-                )
-            raise
-
-        try:
-            self.notification_repo.update_status(notification_id, NotificationStatus.SENT)
-        except Exception:
-            logger.exception(
-                "Notification %s was delivered, but persisting SENT status failed",
-                notification_id,
-            )
-            raise
 
     def _handle_task_created(self, event: DomainEvent) -> None:
         """Handle task created event."""
         task_id = event.data["task_id"]
-        # Need task repository to get task details - not implemented yet
-        # For now, minimal implementation
-        logger.info(f"Task {task_id} created - notification would be sent")
+        task = self.task_repo.find_by_id(task_id)
+        if not task:
+            logger.warning(f"Task {task_id} not found for notification")
+            return
+
+        creator = self.user_repo.find_by_id(event.data.get("creator_id")) if event.data.get("creator_id") else None
+        incident = self.incident_repo.find_by_id(task.incident_id)
+        recipients = self._collect_task_stakeholders(
+            incident_created_by=incident.created_by if incident else None,
+            incident_assigned_to=incident.assigned_to if incident else None,
+            task_assigned_to=task.assigned_to,
+            exclude_user_id=event.data.get("creator_id"),
+        )
+
+        builder = TaskCreatedNotificationBuilder(
+            data={
+                "id": task.id,
+                "title": task.title,
+                "incident_id": task.incident_id,
+            },
+            creator_name=creator.name if creator else "System",
+        )
+
+        for recipient in recipients:
+            self._deliver_email_notification(
+                recipient=recipient,
+                builder=builder,
+                event_type=EventType.TASK_CREATED,
+            )
+
+    def _handle_task_assigned(self, event: DomainEvent) -> None:
+        """Handle task assigned event."""
+        task_id = event.data["task_id"]
+        task = self.task_repo.find_by_id(task_id)
+        if not task:
+            logger.warning(f"Task {task_id} not found for notification")
+            return
+
+        assigned_to_id = event.data.get("assigned_to_id") or task.assigned_to
+        if not assigned_to_id:
+            return
+
+        recipient = self.user_repo.find_by_id(assigned_to_id)
+        if not recipient:
+            return
+
+        assigner = self.user_repo.find_by_id(event.data.get("assigner_id")) if event.data.get("assigner_id") else None
+        builder = TaskAssignedNotificationBuilder(
+            data={
+                "id": task.id,
+                "title": task.title,
+                "incident_id": task.incident_id,
+            },
+            assigner_name=assigner.name if assigner else "System",
+        )
+
+        self._deliver_email_notification(
+            recipient=recipient,
+            builder=builder,
+            event_type=EventType.TASK_ASSIGNED,
+        )
 
     def _handle_task_done(self, event: DomainEvent) -> None:
         """Handle task done event."""
         task_id = event.data["task_id"]
-        logger.info(f"Task {task_id} marked done - notification would be sent")
+        task = self.task_repo.find_by_id(task_id)
+        if not task:
+            logger.warning(f"Task {task_id} not found for notification")
+            return
+
+        completed_by_id = event.data.get("completed_by")
+        completer = self.user_repo.find_by_id(completed_by_id) if completed_by_id else None
+        incident = self.incident_repo.find_by_id(task.incident_id)
+
+        recipients = self._collect_task_stakeholders(
+            incident_created_by=incident.created_by if incident else None,
+            incident_assigned_to=incident.assigned_to if incident else None,
+            task_assigned_to=task.assigned_to,
+            exclude_user_id=completed_by_id,
+        )
+
+        builder = TaskDoneNotificationBuilder(
+            data={
+                "id": task.id,
+                "title": task.title,
+                "incident_id": task.incident_id,
+            },
+            completed_by_name=completer.name if completer else "System",
+        )
+
+        for recipient in recipients:
+            self._deliver_email_notification(
+                recipient=recipient,
+                builder=builder,
+                event_type=EventType.TASK_DONE,
+            )
 
     def _create_notification(
         self,
@@ -264,10 +309,7 @@ class NotificationObserver(Observer):
         Returns:
             Created notification entity
         """
-        from ...domain.patterns.factory import EntityFactory
-
-        factory = EntityFactory()
-        notification = factory.create_notification(
+        notification = self.entity_factory.create_notification(
             id=None,
             recipient_id=recipient_id,
             channel=channel,
@@ -276,6 +318,59 @@ class NotificationObserver(Observer):
             status=NotificationStatus.PENDING,
         )
         return self.notification_repo.save(notification)
+
+    def _deliver_email_notification(
+        self,
+        recipient: User,
+        builder: NotificationBuilder,
+        event_type: EventType,
+    ) -> None:
+        """Persist, deliver, and update status for an email notification."""
+        notification = self._create_notification(
+            recipient_id=recipient.id,
+            channel=NotificationChannel.EMAIL,
+            message=builder.build_notification(),
+            event_type=event_type,
+        )
+
+        try:
+            command = self.command_factory.create_email_command(
+                recipient=recipient.email,
+                subject=builder.build_subject(),
+                body=builder.build_body(),
+            )
+            command.execute()
+            self.notification_repo.update_status(notification.id, NotificationStatus.SENT)
+        except Exception as e:
+            logger.error(
+                f"Failed to deliver notification {notification.id} to {recipient.email}: {e}",
+                exc_info=True,
+            )
+            self.notification_repo.update_status(notification.id, NotificationStatus.FAILED)
+
+    def _collect_task_stakeholders(
+        self,
+        incident_created_by: int | None,
+        incident_assigned_to: int | None,
+        task_assigned_to: int | None,
+        exclude_user_id: int | None = None,
+    ) -> list[User]:
+        """Collect unique users who should receive task-related notifications."""
+        candidate_ids = {
+            incident_created_by,
+            incident_assigned_to,
+            task_assigned_to,
+        }
+        candidate_ids.discard(None)
+        if exclude_user_id is not None:
+            candidate_ids.discard(exclude_user_id)
+
+        recipients: list[User] = []
+        for user_id in candidate_ids:
+            user = self.user_repo.find_by_id(user_id)
+            if user:
+                recipients.append(user)
+        return recipients
 
     def _create_email_command(self, recipient: str, subject: str, body: str) -> EmailNotificationCommand:
         """Create an email command."""

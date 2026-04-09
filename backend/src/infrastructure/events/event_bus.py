@@ -56,3 +56,7 @@ class EventBus:
         logger.info(f"Publishing event: {event.event_type}")
         for observer in self._observers:
             observer.update(event)
+
+    def notify(self, event: DomainEvent) -> None:
+        """Compatibility alias for Subject-like publishers."""
+        self.publish(event)

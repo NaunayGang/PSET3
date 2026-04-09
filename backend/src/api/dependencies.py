@@ -76,17 +76,19 @@ def get_notification_repository(db: Session = Depends(get_db)) -> NotificationRe
     return SQLAlchemyNotificationRepository(db)
 
 
-def get_event_bus(db: Session = Depends(get_db)) -> EventBus:
-    """
-    Dependency for getting an initialized event bus.
-
-    Args:
-        db: Database session
-
-    Returns:
-        Event bus with observers attached
-    """
-    return initialize_event_system(db)
+def get_event_bus(
+    notification_repository: Annotated[NotificationRepository, Depends(get_notification_repository)],
+    user_repository: Annotated[UserRepository, Depends(get_user_repository)],
+    incident_repository: Annotated[IncidentRepository, Depends(get_incident_repository)],
+    task_repository: Annotated[TaskRepository, Depends(get_task_repository)],
+) -> EventBus:
+    """Dependency for getting a configured event bus with observers attached."""
+    return initialize_event_system(
+        notification_repo=notification_repository,
+        user_repo=user_repository,
+        incident_repo=incident_repository,
+        task_repo=task_repository,
+    )
 
 
 async def get_current_user(

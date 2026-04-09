@@ -4,6 +4,8 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from ...domain.entities.notification import Notification
+from ...domain.enums.event_type import EventType
+from ...domain.enums.notification_channel import NotificationChannel
 from ...domain.enums.notification_status import NotificationStatus
 from ...domain.repositories.notification_repository import NotificationRepository
 from ..database.models.notification_model import NotificationModel
@@ -34,9 +36,9 @@ class SQLAlchemyNotificationRepository(NotificationRepository):
         return Notification(
             id=model.id,
             recipient_id=model.recipient_id,
-            channel=model.channel,
+            channel=NotificationChannel(model.channel),
             message=model.message,
-            event_type=model.event_type,
+            event_type=EventType(model.event_type),
             status=NotificationStatus(model.status),
             created_at=model.created_at,
         )

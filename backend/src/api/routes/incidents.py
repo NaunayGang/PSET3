@@ -19,7 +19,12 @@ from ...domain.repositories.user_repository import UserRepository
 from ...domain.entities.user import User
 from ...domain.exceptions import EntityNotFoundError, InvalidStateTransitionError
 from ...infrastructure.events.event_bus import EventBus
-from ..dependencies import get_incident_repository, get_user_repository, get_current_user, get_event_bus
+from ..dependencies import (
+    get_incident_repository,
+    get_user_repository,
+    get_current_user,
+    get_event_bus,
+)
 
 router = APIRouter()
 
@@ -71,7 +76,7 @@ def create_incident(
 
     Any authenticated user can create incidents (OPERATOR and above).
     """
-    use_case = CreateIncidentUseCase(incident_repo, event_bus=event_bus)
+    use_case = CreateIncidentUseCase(incident_repo, event_publisher=event_bus)
     try:
         return use_case.execute(data, created_by=current_user.id)
     except ValueError as e:
@@ -85,13 +90,14 @@ def assign_incident(
     current_user: Annotated[User, Depends(get_current_user)],
     incident_repo: Annotated[IncidentRepository, Depends(get_incident_repository)],
     user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    event_bus: Annotated[EventBus, Depends(get_event_bus)],
 ):
     """
     Assign incident to a user.
 
     Requires SUPERVISOR or ADMIN role (should be enforced by route decorator).
     """
-    use_case = AssignIncidentUseCase(incident_repo, user_repo)
+    use_case = AssignIncidentUseCase(incident_repo, user_repo, event_publisher=event_bus)
     try:
         return use_case.execute(
             incident_id=incident_id,
@@ -108,6 +114,7 @@ def change_incident_status(
     status_update: IncidentStatusUpdate,
     current_user: Annotated[User, Depends(get_current_user)],
     incident_repo: Annotated[IncidentRepository, Depends(get_incident_repository)],
+    event_bus: Annotated[EventBus, Depends(get_event_bus)],
 ):
     """
     Change incident status.
@@ -116,7 +123,7 @@ def change_incident_status(
     - OPERATOR can change their own incidents (implemented in future)
     - SUPERVISOR/ADMIN can change any incident
     """
-    use_case = ChangeIncidentStatusUseCase(incident_repo)
+    use_case = ChangeIncidentStatusUseCase(incident_repo, event_publisher=event_bus)
     try:
         return use_case.execute(
             incident_id=incident_id,

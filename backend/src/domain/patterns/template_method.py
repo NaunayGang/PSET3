@@ -196,3 +196,49 @@ class TaskAssignedNotificationBuilder(NotificationBuilder):
             f"Assigned by: {self.assigner_name}\n\n"
             f"Please complete this task in the OpsCenter dashboard."
         )
+
+
+class TaskCreatedNotificationBuilder(NotificationBuilder):
+    """Builder for task created notifications."""
+
+    def __init__(self, data: dict[str, Any], creator_name: str = "System"):
+        super().__init__(data)
+        self.creator_name = creator_name
+
+    def build_subject(self) -> str:
+        title = self.data.get("title", "Unknown Task")
+        return f"New Task Created: {title}"
+
+    def build_body(self) -> str:
+        task_id = self.data.get("id", "N/A")
+        title = self.data.get("title", "Unknown")
+        incident_id = self.data.get("incident_id", "N/A")
+        return (
+            f"Task #{task_id}: {title}\n"
+            f"Related Incident: #{incident_id}\n"
+            f"Created by: {self.creator_name}\n\n"
+            f"Please review this task in the OpsCenter dashboard."
+        )
+
+
+class TaskDoneNotificationBuilder(NotificationBuilder):
+    """Builder for task completion notifications."""
+
+    def __init__(self, data: dict[str, Any], completed_by_name: str = "System"):
+        super().__init__(data)
+        self.completed_by_name = completed_by_name
+
+    def build_subject(self) -> str:
+        title = self.data.get("title", "Unknown Task")
+        return f"Task Completed: {title}"
+
+    def build_body(self) -> str:
+        task_id = self.data.get("id", "N/A")
+        title = self.data.get("title", "Unknown")
+        incident_id = self.data.get("incident_id", "N/A")
+        return (
+            f"Task #{task_id}: {title}\n"
+            f"Related Incident: #{incident_id}\n"
+            f"Completed by: {self.completed_by_name}\n\n"
+            f"You can review the updated progress in the OpsCenter dashboard."
+        )
