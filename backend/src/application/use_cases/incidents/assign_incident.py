@@ -5,9 +5,13 @@ from datetime import datetime
 from ...dtos.incident_dto import IncidentAssign
 from ....domain.entities.incident import Incident
 from ....domain.enums.incident_status import IncidentStatus
+from ....domain.enums.event_type import EventType
+from ....domain.patterns.observer import DomainEvent
 from ....domain.repositories.incident_repository import IncidentRepository
 from ....domain.repositories.user_repository import UserRepository
 from ....domain.exceptions import EntityNotFoundError, PermissionDeniedError
+from ....infrastructure.events.event_bus import EventBus
+
 
 
 class AssignIncidentUseCase:
@@ -17,7 +21,9 @@ class AssignIncidentUseCase:
         self,
         incident_repository: IncidentRepository,
         user_repository: UserRepository,
+        event_bus: EventBus | None = None,
     ):
+
         """
         Initialize use case.
 
@@ -27,6 +33,8 @@ class AssignIncidentUseCase:
         """
         self.incident_repository = incident_repository
         self.user_repository = user_repository
+        self.event_bus = event_bus
+
 
     def execute(self, incident_id: int, assigned_to_id: int, assigner_id: int) -> Incident:
         """
@@ -64,4 +72,19 @@ class AssignIncidentUseCase:
         incident.updated_at = datetime.now()
 
         saved = self.incident_repository.save(incident)
+
+        if self.event_bus is not None and saved.id is not None:
+            self.event_bus.publish(
+                DomainEvent(
+                    event_type=EventType.INCIDENT_ASSIGNED,
+                    data={
+                        "incident_id": saved.id,
+                        "assigned_to_id": assigned_to_id,
+                        "assigner_id": assigner_id,
+                    },
+                    timestamp=datetime.now(),
+                )
+            )
+
         return saved
+

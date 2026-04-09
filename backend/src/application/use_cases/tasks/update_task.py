@@ -7,7 +7,12 @@ from ....domain.entities.task import Task
 from ....domain.repositories.task_repository import TaskRepository
 from ....domain.repositories.user_repository import UserRepository
 from ....domain.enums.role import Role
+from ....domain.enums.task_status import TaskStatus
+from ....domain.enums.event_type import EventType
+from ....domain.patterns.observer import DomainEvent
 from ....domain.exceptions import EntityNotFoundError, PermissionDeniedError
+from ....infrastructure.events.event_bus import EventBus
+
 
 
 class UpdateTaskUseCase:
@@ -17,7 +22,9 @@ class UpdateTaskUseCase:
         self,
         task_repository: TaskRepository,
         user_repository: UserRepository,
+        event_bus: EventBus | None = None,
     ):
+
         """
         Initialize use case.
 
@@ -27,6 +34,8 @@ class UpdateTaskUseCase:
         """
         self.task_repository = task_repository
         self.user_repository = user_repository
+        self.event_bus = event_bus
+
 
     def execute(self, task_id: int, updates: TaskUpdate, user_id: int) -> Task:
         """
@@ -60,8 +69,13 @@ class UpdateTaskUseCase:
         if not (is_assigned or is_privileged):
             raise PermissionDeniedError("Cannot update this task")
 
+        # Track previous values for event publishing
+        previous_status = task.status
+        previous_assigned_to = task.assigned_to
+
         # Apply updates
         if updates.title is not None:
+
             task.title = updates.title.strip()
         if updates.description is not None:
             task.description = updates.description.strip()
@@ -81,4 +95,34 @@ class UpdateTaskUseCase:
 
         # Persist
         saved = self.task_repository.save(task)
+
+        if self.event_bus is not None and saved.id is not None:
+            if saved.assigned_to is not None and saved.assigned_to != previous_assigned_to:
+                self.event_bus.publish(
+                    DomainEvent(
+                        event_type=EventType.TASK_ASSIGNED,
+                        data={
+                            "task_id": saved.id,
+                            "incident_id": saved.incident_id,
+                            "assigned_to_id": saved.assigned_to,
+                            "assigner_id": user_id,
+                        },
+                        timestamp=datetime.now(timezone.utc),
+                    )
+                )
+
+            if previous_status != TaskStatus.DONE and saved.status == TaskStatus.DONE:
+                self.event_bus.publish(
+                    DomainEvent(
+                        event_type=EventType.TASK_DONE,
+                        data={
+                            "task_id": saved.id,
+                            "incident_id": saved.incident_id,
+                            "completed_by": user_id,
+                        },
+                        timestamp=datetime.now(timezone.utc),
+                    )
+                )
+
         return saved
+

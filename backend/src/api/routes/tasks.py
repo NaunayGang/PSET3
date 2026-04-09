@@ -17,12 +17,15 @@ from ...domain.repositories.incident_repository import IncidentRepository
 from ...domain.repositories.user_repository import UserRepository
 from ...domain.entities.user import User
 from ...domain.exceptions import EntityNotFoundError, PermissionDeniedError
+from ...infrastructure.events.event_bus import EventBus
 from ..dependencies import (
     get_task_repository,
     get_incident_repository,
     get_user_repository,
     get_current_user,
+    get_event_bus,
 )
+
 
 router = APIRouter()
 
@@ -50,14 +53,17 @@ def create_task(
     task_repo: Annotated[TaskRepository, Depends(get_task_repository)],
     incident_repo: Annotated[IncidentRepository, Depends(get_incident_repository)],
     user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    event_bus: Annotated[EventBus, Depends(get_event_bus)],
 ):
+
     """
     Create a new task linked to an incident.
 
     Any authenticated user can create tasks (subject to incident access).
     Operators can only create tasks for incidents they own or are assigned to.
     """
-    use_case = CreateTaskUseCase(task_repo, incident_repo, user_repo)
+    use_case = CreateTaskUseCase(task_repo, incident_repo, user_repo, event_bus=event_bus)
+
     try:
         return use_case.execute(data, creator_id=current_user.id)
     except EntityNotFoundError as e:
@@ -75,14 +81,17 @@ def update_task(
     current_user: Annotated[User, Depends(get_current_user)],
     task_repo: Annotated[TaskRepository, Depends(get_task_repository)],
     user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    event_bus: Annotated[EventBus, Depends(get_event_bus)],
 ):
+
     """
     Update a task (status, assignment, title, description).
 
     - Assigned users can update status and their own tasks
     - ADMIN/SUPERVISOR can update any task and reassign
     """
-    use_case = UpdateTaskUseCase(task_repo, user_repo)
+    use_case = UpdateTaskUseCase(task_repo, user_repo, event_bus=event_bus)
+
     try:
         return use_case.execute(task_id, updates, user_id=current_user.id)
     except EntityNotFoundError as e:
@@ -100,7 +109,9 @@ def update_task_status(
     current_user: Annotated[User, Depends(get_current_user)],
     task_repo: Annotated[TaskRepository, Depends(get_task_repository)],
     user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    event_bus: Annotated[EventBus, Depends(get_event_bus)],
 ):
+
     """
     Update task status.
 
@@ -108,7 +119,8 @@ def update_task_status(
     """
     # Reuse update_task with only status field
     updates = TaskUpdate(status=status_update.status)
-    use_case = UpdateTaskUseCase(task_repo, user_repo)
+    use_case = UpdateTaskUseCase(task_repo, user_repo, event_bus=event_bus)
+
     try:
         return use_case.execute(task_id, updates, user_id=current_user.id)
     except EntityNotFoundError as e:

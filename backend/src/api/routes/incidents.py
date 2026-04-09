@@ -85,13 +85,16 @@ def assign_incident(
     current_user: Annotated[User, Depends(get_current_user)],
     incident_repo: Annotated[IncidentRepository, Depends(get_incident_repository)],
     user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    event_bus: Annotated[EventBus, Depends(get_event_bus)],
 ):
+
     """
     Assign incident to a user.
 
     Requires SUPERVISOR or ADMIN role (should be enforced by route decorator).
     """
-    use_case = AssignIncidentUseCase(incident_repo, user_repo)
+    use_case = AssignIncidentUseCase(incident_repo, user_repo, event_bus=event_bus)
+
     try:
         return use_case.execute(
             incident_id=incident_id,
@@ -108,7 +111,9 @@ def change_incident_status(
     status_update: IncidentStatusUpdate,
     current_user: Annotated[User, Depends(get_current_user)],
     incident_repo: Annotated[IncidentRepository, Depends(get_incident_repository)],
+    event_bus: Annotated[EventBus, Depends(get_event_bus)],
 ):
+
     """
     Change incident status.
 
@@ -116,7 +121,8 @@ def change_incident_status(
     - OPERATOR can change their own incidents (implemented in future)
     - SUPERVISOR/ADMIN can change any incident
     """
-    use_case = ChangeIncidentStatusUseCase(incident_repo)
+    use_case = ChangeIncidentStatusUseCase(incident_repo, event_bus=event_bus)
+
     try:
         return use_case.execute(
             incident_id=incident_id,

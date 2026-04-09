@@ -13,7 +13,13 @@ from ...domain.repositories.incident_repository import IncidentRepository
 from ...domain.entities.notification import Notification
 from ...domain.enums.notification_channel import NotificationChannel
 from ...domain.enums.notification_status import NotificationStatus
-from ...domain.patterns.template_method import NotificationBuilder
+from ...domain.patterns.template_method import (
+    NotificationBuilder,
+    IncidentCreatedNotificationBuilder,
+    IncidentAssignedNotificationBuilder,
+    IncidentStatusChangedNotificationBuilder,
+)
+
 from ...infrastructure.notifications.email_sender import EmailNotificationCommand
 from ...infrastructure.notifications.slack_sender import SlackNotificationCommand
 import logging

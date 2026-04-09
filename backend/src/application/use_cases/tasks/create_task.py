@@ -5,11 +5,15 @@ from datetime import datetime, timezone
 from ...dtos.task_dto import TaskCreate
 from ....domain.entities.task import Task
 from ....domain.enums.task_status import TaskStatus
+from ....domain.enums.event_type import EventType
+from ....domain.patterns.observer import DomainEvent
 from ....domain.repositories.task_repository import TaskRepository
 from ....domain.repositories.incident_repository import IncidentRepository
 from ....domain.repositories.user_repository import UserRepository
 from ....domain.patterns.factory import EntityFactory
 from ....domain.exceptions import EntityNotFoundError, PermissionDeniedError
+from ....infrastructure.events.event_bus import EventBus
+
 
 
 class CreateTaskUseCase:
@@ -21,7 +25,9 @@ class CreateTaskUseCase:
         incident_repository: IncidentRepository,
         user_repository: UserRepository,
         factory: EntityFactory | None = None,
+        event_bus: EventBus | None = None,
     ):
+
         """
         Initialize use case.
 
@@ -35,6 +41,8 @@ class CreateTaskUseCase:
         self.incident_repository = incident_repository
         self.user_repository = user_repository
         self.factory = factory or EntityFactory()
+        self.event_bus = event_bus
+
 
     def execute(self, data: TaskCreate, creator_id: int) -> Task:
         """
@@ -80,4 +88,19 @@ class CreateTaskUseCase:
 
         # Persist
         saved = self.task_repository.save(task)
+
+        if self.event_bus is not None and saved.id is not None:
+            self.event_bus.publish(
+                DomainEvent(
+                    event_type=EventType.TASK_CREATED,
+                    data={
+                        "task_id": saved.id,
+                        "incident_id": saved.incident_id,
+                        "creator_id": creator_id,
+                    },
+                    timestamp=datetime.now(timezone.utc),
+                )
+            )
+
         return saved
+
