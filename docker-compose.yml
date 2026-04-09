@@ -83,8 +83,26 @@ services:
     networks:
       - opscenter-network
 
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: opscenter-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@opscenter.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - opscenter-network
+
 volumes:
   postgres_data:
+  pgadmin_data:
 
 networks:
   opscenter-network:

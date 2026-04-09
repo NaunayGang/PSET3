@@ -90,8 +90,27 @@ Note: the current API container startup runs Uvicorn only; it does not auto-run 
 - API: http://localhost:8000
 - Frontend UI: http://localhost:8501
 - PostgreSQL: localhost:5432
+- pgAdmin: http://localhost:5050
 
-5. Stop services:
+5. pgAdmin setup (optional):
+
+- Login credentials:
+  - Email: `admin@opscenter.com`
+  - Password: `admin123`
+- Add a new server in pgAdmin with:
+  - Host: `db`
+  - Port: `5432`
+  - Username: `opscenter`
+  - Password: `opscenter`
+  - Database: `opscenter`
+
+You can override pgAdmin defaults in `.env` using:
+
+- `PGADMIN_DEFAULT_EMAIL`
+- `PGADMIN_DEFAULT_PASSWORD`
+- `PGADMIN_PORT`
+
+6. Stop services:
 
 ```bash
 docker compose down
