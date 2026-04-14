@@ -22,6 +22,7 @@ def render_tasks_view(role: str | None) -> None:
     st.header("Tasks")
 
     can_create_task = can_perform_action(role, "create_task")
+    can_assign_task = can_perform_action(role, "assign_task")
     can_update_task = can_perform_action(role, "update_task")
 
     api_client = st.session_state.get("api_client")
@@ -103,25 +104,53 @@ def render_tasks_view(role: str | None) -> None:
     current_status = selected_task.get("status", "OPEN")
     allowed_statuses = NEXT_STATUS_BY_CURRENT.get(current_status, [current_status])
 
-    status_value = st.selectbox(
-        "Update task status",
-        allowed_statuses,
-        index=0,
-        key=f"task_status_{selected_task_id}",
-        disabled=not can_update_task,
-    )
+    action_col_1, action_col_2 = st.columns(2)
 
-    if st.button(
-        "Apply task status",
-        key=f"apply_task_status_{selected_task_id}",
-        disabled=not can_update_task,
-    ):
-        try:
-            api_client.patch(
-                f"/tasks/{selected_task_id}/status",
-                {"status": status_value},
-            )
-            st.success("Task status updated.")
-            st.rerun()
-        except APIClientError as exc:
-            st.error(f"Could not update task status: {exc}")
+    with action_col_1:
+        status_value = st.selectbox(
+            "Update task status",
+            allowed_statuses,
+            index=0,
+            key=f"task_status_{selected_task_id}",
+            disabled=not can_update_task,
+        )
+
+        if st.button(
+            "Apply task status",
+            key=f"apply_task_status_{selected_task_id}",
+            disabled=not can_update_task,
+        ):
+            try:
+                api_client.patch(
+                    f"/tasks/{selected_task_id}/status",
+                    {"status": status_value},
+                )
+                st.success("Task status updated.")
+                st.rerun()
+            except APIClientError as exc:
+                st.error(f"Could not update task status: {exc}")
+
+    with action_col_2:
+        assigned_to_value = st.number_input(
+            "Assign to user ID",
+            min_value=1,
+            step=1,
+            value=int(selected_task.get("assigned_to") or 1),
+            key=f"task_assign_to_{selected_task_id}",
+            disabled=not can_assign_task,
+        )
+
+        if st.button(
+            "Assign task",
+            key=f"assign_task_{selected_task_id}",
+            disabled=not can_assign_task,
+        ):
+            try:
+                api_client.patch(
+                    f"/tasks/{selected_task_id}",
+                    {"assigned_to": int(assigned_to_value)},
+                )
+                st.success("Task assigned successfully.")
+                st.rerun()
+            except APIClientError as exc:
+                st.error(f"Could not assign task: {exc}")
